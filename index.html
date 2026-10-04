@@ -1,1 +1,506 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>両面印刷用絵カードジェネレーター</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        div, h1, p, h3, h4, label, input, button, textarea {
+            box-sizing: border-box;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+        p.description {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 25px;
+        }
+        .tool-bar {
+            background: #eef2f3;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .tool-bar h3 {
+            margin: 0 0 5px 0;
+            font-size: 15px;
+            color: #2c3e50;
+        }
+        .batch-upload-box {
+            background: #fff;
+            border: 2px dashed #3498db;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        textarea.prompt-box {
+            width: 100%;
+            height: 110px;
+            padding: 8px;
+            font-size: 13px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            resize: vertical;
+            background: #fff;
+        }
+        .card-editor-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .card-editor-item {
+            background: #fafbfc;
+            border: 1px solid #e1e4e8;
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .card-editor-item h4 {
+            margin: 0;
+            font-size: 14px;
+            color: #34495e;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        .input-group label {
+            font-size: 11px;
+            font-weight: bold;
+            color: #555;
+        }
+        .input-group input {
+            padding: 6px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .input-group input:focus {
+            border-color: #3498db;
+            outline: none;
+        }
+        .actions {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin: 0 5px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button.success {
+            background-color: #27ae60;
+        }
+        button.success:hover {
+            background-color: #219653;
+        }
+        button.secondary {
+            background-color: #7f8c8d;
+        }
+        button.secondary:hover {
+            background-color: #626a6b;
+        }
+        .print-section {
+            display: none;
+        }
+        @media print {
+            body {
+                background: none;
+                padding: 0;
+            }
+            .container {
+                display: none;
+            }
+            .print-section {
+                display: block;
+            }
+            @page {
+                size: A4 portrait;
+                margin: 10mm;
+            }
+            .page {
+                page-break-after: always;
+                width: 210mm;
+                height: 297mm;
+                padding: 10mm;
+            }
+        }
+        .preview-box {
+            border: 2px dashed #bdc3c7;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 8px;
+            background: #fff;
+        }
+        .sheet-preview {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 10px;
+            width: 100%;
+            max-width: 650px;
+            margin: 0 auto;
+            aspect-ratio: 1 / 1.414;
+            background: white;
+            padding: 15px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .card-cell {
+            border: 2px solid #2c3e50;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 8px;
+            background: #fff;
+        }
+        .card-cell .main-text {
+            font-size: 14px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 6px;
+            text-align: center;
+            line-height: 1.2;
+            word-break: break-all;
+            min-height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .card-cell .img-container {
+            width: 100%;
+            flex: 1;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f9f9f9;
+        }
+        .card-cell img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .section-title {
+            font-size: 16px;
+            color: #34495e;
+            margin-top: 25px;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #eaeaea;
+            padding-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
 
+<div class="container">
+    <h1>両面印刷用絵カードジェネレーター</h1>
+    <p class="description">表面は「日本語＋特大イラスト」、裏面は「英語（解答）＋特大イラスト」で両面印刷できます。</p>
+
+    <div class="tool-bar">
+        <div>
+            <h3>1. 文字なしイラスト用AIプロンプトをコピー</h3>
+            <textarea id="promptText" class="prompt-box" readonly></textarea>
+            <div style="margin-top: 8px;">
+                <button class="secondary" onclick="copyPrompt()" style="font-size:13px; padding:6px 12px;">プロンプトをコピーする</button>
+                <span id="copyMsg" style="font-size:12px; color:#27ae60; margin-left:10px; display:none;">コピーしました！</span>
+            </div>
+        </div>
+
+        <div class="batch-upload-box">
+            <h3>2. 3×3シート画像を1枚だけアップロード（自動分割）</h3>
+            <input type="file" id="sheetFile" accept="image/*" onchange="handleSheetUpload(event)" style="margin-top: 5px;">
+            <div style="font-size:11px; color:#666; margin-top:5px;">※文字の入っていない純粋なイラストだけの3×3シート画像を選ぶと、自動で9分割されます。</div>
+        </div>
+    </div>
+
+    <div class="card-editor-grid" id="editorGrid"></div>
+
+    <div class="actions">
+        <button onclick="updatePreview()">プレビューを更新</button>
+        <button class="success" onclick="window.print()">A4で印刷する</button>
+    </div>
+
+    <div class="section-title">表面プレビュー（問題：日本語 ＋ 特大イラスト）</div>
+    <div class="preview-box">
+        <div id="frontPreview" class="sheet-preview"></div>
+    </div>
+
+    <div class="section-title">裏面プレビュー（解答：英語 ＋ 特大イラスト / 長辺とじ反転）</div>
+    <div class="preview-box">
+        <div id="backPreview" class="sheet-preview"></div>
+    </div>
+</div>
+
+<div class="print-section">
+    <div class="page" id="printFront"></div>
+    <div class="page" id="printBack"></div>
+</div>
+
+<script>
+    const defaultData = [
+        { ja: "走る", en: "run" },
+        { ja: "運転する", en: "drive" },
+        { ja: "飛ぶ", en: "fly" },
+        { ja: "掘る", en: "dig" },
+        { ja: "建てる", en: "build" },
+        { ja: "登る", en: "climb" },
+        { ja: "食べる", en: "eat" },
+        { ja: "飲む", en: "drink" },
+        { ja: "読む", en: "read" }
+    ];
+
+    const dictionary = {
+        "走る": "run", "はしる": "run",
+        "運転する": "drive", "うんてんする": "drive",
+        "飛ぶ": "fly", "とぶ": "fly",
+        "掘る": "dig", "ほる": "dig",
+        "建てる": "build", "たてる": "build",
+        "登る": "climb", "のぼる": "climb",
+        "食べる": "eat", "たべる": "eat",
+        "飲む": "drink", "のむ": "drink",
+        "読む": "read", "よむ": "read",
+        "乗る": "ride", "のる": "ride",
+        "泳ぐ": "swim", "およぐ": "swim",
+        "書く": "write", "かく": "write",
+        "見る": "see", "みる": "see",
+        "聞く": "listen", "きく": "listen",
+        "話す": "speak", "はなす": "speak",
+        "歩く": "walk", "あるく": "walk",
+        "歌う": "sing", "うたう": "sing",
+        "踊る": "dance", "おどる": "dance",
+        "遊ぶ": "play", "あそぶ": "play",
+        "作る": "make", "つくる": "make",
+        "行く": "go", "いく": "go",
+        "来る": "come", "くる": "come"
+    };
+
+    const cardImages = {};
+    const editorGrid = document.getElementById('editorGrid');
+
+    function initEditor() {
+        editorGrid.innerHTML = "";
+        for (let i = 0; i < 9; i++) {
+            const item = document.createElement('div');
+            item.className = 'card-editor-item';
+            
+            const h4 = document.createElement('h4');
+            h4.textContent = "カード " + (i + 1);
+            item.appendChild(h4);
+
+            const jaGroup = document.createElement('div');
+            jaGroup.className = 'input-group';
+            const jaLabel = document.createElement('label');
+            jaLabel.textContent = "日本語（表面に表示）";
+            const jaInput = document.createElement('input');
+            jaInput.type = "text";
+            jaInput.id = "ja_" + i;
+            jaInput.value = defaultData[i].ja;
+
+            jaInput.addEventListener('input', function() {
+                const val = jaInput.value.trim();
+                const enInput = document.getElementById("en_" + i);
+                
+                if (dictionary[val]) {
+                    enInput.value = dictionary[val];
+                } else {
+                    let matched = false;
+                    for (let key in dictionary) {
+                        if (val.includes(key)) {
+                            enInput.value = dictionary[key];
+                            matched = true;
+                            break;
+                        }
+                    }
+                    if (!matched && val === "") {
+                        enInput.value = "";
+                    }
+                }
+                updatePreview();
+            });
+
+            jaGroup.appendChild(jaLabel);
+            jaGroup.appendChild(jaInput);
+            item.appendChild(jaGroup);
+
+            const enGroup = document.createElement('div');
+            enGroup.className = 'input-group';
+            const enLabel = document.createElement('label');
+            enLabel.textContent = "英語・解答（裏面に表示）";
+            const enInput = document.createElement('input');
+            enInput.type = "text";
+            enInput.id = "en_" + i;
+            enInput.value = defaultData[i].en;
+
+            enInput.addEventListener('input', function() {
+                updatePreview();
+            });
+
+            enGroup.appendChild(enLabel);
+            enGroup.appendChild(enInput);
+            item.appendChild(enGroup);
+
+            editorGrid.appendChild(item);
+        }
+        updatePreview();
+    }
+
+    function handleSheetUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const cellWidth = img.width / 3;
+                const cellHeight = img.height / 3;
+
+                for (let row = 0; row < 3; row++) {
+                    for (let col = 0; col < 3; col++) {
+                        const index = row * 3 + col;
+                        canvas.width = cellWidth;
+                        canvas.height = cellHeight;
+                        ctx.clearRect(0, 0, cellWidth, cellHeight);
+                        
+                        ctx.drawImage(
+                            img, 
+                            col * cellWidth, row * cellHeight, cellWidth, cellHeight, 
+                            0, 0, cellWidth, cellHeight
+                        );
+
+                        cardImages[index] = canvas.toDataURL('image/png');
+                    }
+                }
+                updatePreview();
+                alert("シート画像を自動で9分割しました！");
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function getCardData() {
+        const data = [];
+        for (let i = 0; i < 9; i++) {
+            const jaEl = document.getElementById("ja_" + i);
+            const enEl = document.getElementById("en_" + i);
+            data.push({
+                ja: jaEl ? jaEl.value : defaultData[i].ja,
+                en: enEl ? enEl.value : defaultData[i].en,
+                img: cardImages[i] || ""
+            });
+        }
+        return data;
+    }
+
+    function updatePromptBox() {
+        const data = getCardData();
+        let promptText = "A4 portrait printable sheet containing a 3x3 grid of 9 pure watercolor illustrations. Absolutely NO text, NO letters, NO words, NO Japanese, NO English, NO labels inside the image. Just 9 separate pure drawing panels for the following actions:\n";
+        data.forEach((card, idx) => {
+            promptText += (idx + 1) + ". " + card.ja + "\n";
+        });
+        promptText += "High quality, beautiful watercolor style, children's educational material style, clean white background.";
+        document.getElementById('promptText').value = promptText;
+    }
+
+    function copyPrompt() {
+        const textArea = document.getElementById('promptText');
+        textArea.select();
+        navigator.clipboard.writeText(textArea.value).then(() => {
+            const msg = document.getElementById('copyMsg');
+            msg.style.display = 'inline';
+            setTimeout(() => { msg.style.display = 'none'; }, 2000);
+        });
+    }
+
+    function getBackIndices() {
+        return [
+            2, 1, 0,
+            5, 4, 3,
+            8, 7, 6
+        ];
+    }
+
+    function updatePreview() {
+        const data = getCardData();
+        const backOrder = getBackIndices();
+        updatePromptBox();
+
+        let frontHtml = "";
+        let backHtml = "";
+
+        data.forEach(card => {
+            frontHtml += `
+                <div class="card-cell">
+                    <div class="main-text">${card.ja}</div>
+                    <div class="img-container">
+                        ${card.img ? `<img src="${card.img}">` : '<span style="font-size:10px;color:#aaa;">No Image</span>'}
+                    </div>
+                </div>
+            `;
+        });
+
+        backOrder.forEach(idx => {
+            const card = data[idx];
+            backHtml += `
+                <div class="card-cell">
+                    <div class="main-text" style="color:#2980b9;">${card.en}</div>
+                    <div class="img-container">
+                        ${card.img ? `<img src="${card.img}">` : '<span style="font-size:10px;color:#aaa;">No Image</span>'}
+                    </div>
+                </div>
+            `;
+        });
+
+        document.getElementById('frontPreview').innerHTML = frontHtml;
+        document.getElementById('backPreview').innerHTML = backHtml;
+        
+        document.getElementById('printFront').innerHTML = `<div class="sheet-preview" style="width:100%;height:100%;box-shadow:none;border:none;">${frontHtml}</div>`;
+        document.getElementById('printBack').innerHTML = `<div class="sheet-preview" style="width:100%;height:100%;box-shadow:none;border:none;">${backHtml}</div>`;
+    }
+
+    window.onload = initEditor;
+</script>
+
+</body>
+</html>
